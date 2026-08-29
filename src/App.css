@@ -1,0 +1,926 @@
+/* =====================================================
+   SMART WATER QUALITY DASHBOARD
+   FINAL APP.CSS
+===================================================== */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  background: #f4f7fb;
+  color: #172033;
+}
+
+.dashboard {
+  min-height: 100vh;
+  background: #f4f7fb;
+}
+
+
+/* =====================================================
+   HEADER
+===================================================== */
+
+.header {
+  width: 100%;
+  background: linear-gradient(135deg, #0b5ed7, #087fdb);
+  color: #ffffff;
+  padding: 28px 6%;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
+}
+
+.header h1 {
+  color: #ffffff;
+  font-size: 30px;
+  font-weight: 700;
+  margin-bottom: 7px;
+}
+
+.header p {
+  color: #ffffff;
+  font-size: 15px;
+  opacity: 0.95;
+}
+
+
+/* =====================================================
+   LIVE / OFFLINE
+===================================================== */
+
+.live {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  background: rgba(255, 255, 255, 0.18);
+
+  color: #ffffff;
+
+  padding: 10px 18px;
+
+  border-radius: 30px;
+
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.live span {
+  width: 10px;
+  height: 10px;
+
+  border-radius: 50%;
+
+  /* OFFLINE = RED */
+  background: #dc3545;
+
+  box-shadow: 0 0 8px rgba(220, 53, 69, 0.6);
+}
+
+/* ONLINE = GREEN */
+
+.live.active span {
+  background: #20c997;
+
+  box-shadow: 0 0 8px rgba(32, 201, 151, 0.7);
+}
+
+
+/* =====================================================
+   MAIN
+===================================================== */
+
+main {
+  width: 88%;
+  max-width: 1400px;
+  margin: 30px auto;
+}
+
+
+/* =====================================================
+   CONNECTION CARD
+===================================================== */
+
+.connection-card {
+  width: 100%;
+
+  background: #ffffff;
+
+  border-radius: 18px;
+
+  padding: 20px 25px;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  margin-bottom: 28px;
+
+  border: 1px solid #edf0f5;
+
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.07);
+}
+
+.connection-item,
+.last-updated {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+.connection-item strong,
+.last-updated strong {
+  display: block;
+
+  color: #172033;
+
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.connection-item small,
+.last-updated small {
+  display: block;
+
+  color: #697386;
+
+  margin-top: 4px;
+
+  font-size: 13px;
+}
+
+
+/* =====================================================
+   CONNECTION DOT
+===================================================== */
+
+.connection-dot {
+  width: 14px;
+  height: 14px;
+
+  border-radius: 50%;
+
+  background: #dc3545;
+
+  flex-shrink: 0;
+}
+
+.connection-dot.connected {
+  background: #20c997;
+
+  box-shadow: 0 0 10px rgba(32, 201, 151, 0.7);
+}
+
+
+/* =====================================================
+   SENSOR CARDS
+===================================================== */
+
+.cards {
+  width: 100%;
+
+  display: grid;
+
+  grid-template-columns: repeat(3, 1fr);
+
+  gap: 22px;
+}
+
+.card {
+  background: #ffffff;
+
+  border-radius: 20px;
+
+  padding: 28px;
+
+  text-align: center;
+
+  border: 1px solid #edf0f5;
+
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.07);
+
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.11);
+}
+
+.icon {
+  font-size: 40px;
+
+  margin-bottom: 12px;
+}
+
+.card h3 {
+  color: #586174;
+
+  font-size: 17px;
+  font-weight: 600;
+
+  margin-bottom: 12px;
+}
+
+.value {
+  color: #0b5ed7;
+
+  font-size: 42px;
+  font-weight: 700;
+
+  margin: 8px 0;
+}
+
+.card p {
+  color: #8a93a3;
+
+  font-size: 14px;
+}
+
+
+/* =====================================================
+   SENSOR STATUS
+===================================================== */
+
+.sensor-status {
+  display: inline-block;
+
+  margin-top: 15px;
+
+  padding: 7px 18px;
+
+  border-radius: 20px;
+
+  background: #e9f7ef;
+
+  color: #198754;
+
+  font-size: 12px;
+  font-weight: 700;
+}
+
+
+/* =====================================================
+   OVERALL WATER QUALITY
+===================================================== */
+
+.status-card {
+  width: 100%;
+
+  background: #ffffff;
+
+  margin-top: 30px;
+
+  padding: 32px;
+
+  border-radius: 20px;
+
+  text-align: center;
+
+  border: 1px solid #edf0f5;
+
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.07);
+
+  display: block;
+
+  position: relative;
+
+  z-index: 10;
+
+  opacity: 1;
+
+  visibility: visible;
+}
+
+.status-card h2 {
+  display: block;
+
+  color: #172033;
+
+  font-size: 24px;
+
+  font-weight: 700;
+
+  line-height: 1.5;
+
+  margin: 0 0 22px 0;
+
+  opacity: 1;
+
+  visibility: visible;
+
+  text-shadow: none;
+}
+
+.status-card p {
+  display: block;
+
+  color: #697386;
+
+  font-size: 15px;
+
+  line-height: 1.5;
+
+  margin-top: 15px;
+
+  opacity: 1;
+
+  visibility: visible;
+
+  text-shadow: none;
+}
+
+
+/* =====================================================
+   WATER STATUS
+===================================================== */
+
+.status {
+  display: inline-block;
+
+  padding: 13px 30px;
+
+  border-radius: 30px;
+
+  background: #fff3cd;
+
+  color: #856404;
+
+  font-size: 18px;
+
+  font-weight: 700;
+
+  opacity: 1;
+
+  visibility: visible;
+}
+
+.status.safe {
+  background: #d1e7dd;
+
+  color: #0f5132;
+}
+
+.status.unsafe {
+  background: #f8d7da;
+
+  color: #842029;
+}
+
+
+/* =====================================================
+   SMART WATER QUALITY SCORE
+===================================================== */
+
+.score-card {
+  width: 100%;
+
+  background: #ffffff;
+
+  margin-top: 30px;
+
+  padding: 30px;
+
+  border-radius: 20px;
+
+  border: 1px solid #edf0f5;
+
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.07);
+
+  display: grid;
+
+  grid-template-columns: 1fr 140px 1fr;
+
+  align-items: center;
+
+  gap: 30px;
+
+  min-height: 170px;
+}
+
+.score-info {
+  text-align: left;
+
+  min-width: 0;
+}
+
+.score-info h2 {
+  color: #172033;
+
+  font-size: 22px;
+
+  font-weight: 700;
+
+  line-height: 1.4;
+
+  margin-bottom: 10px;
+}
+
+.score-info p {
+  color: #697386;
+
+  font-size: 14px;
+
+  line-height: 1.5;
+
+  margin: 0;
+
+  white-space: normal;
+}
+
+
+/* =====================================================
+   SCORE CIRCLE
+===================================================== */
+
+.score-circle {
+  width: 120px;
+  height: 120px;
+
+  border-radius: 50%;
+
+  background: #e7f1ff;
+
+  border: 8px solid #0b5ed7;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  justify-content: center;
+
+  margin: auto;
+}
+
+.score-number {
+  color: #0b5ed7;
+
+  font-size: 32px;
+
+  font-weight: 700;
+
+  line-height: 1;
+}
+
+.score-label {
+  color: #697386;
+
+  font-size: 13px;
+
+  margin-top: 5px;
+}
+
+
+/* =====================================================
+   SCORE STATUS
+===================================================== */
+
+.score-status {
+  justify-self: end;
+
+  padding: 12px 20px;
+
+  border-radius: 25px;
+
+  background: #d1e7dd;
+
+  color: #0f5132;
+
+  font-size: 14px;
+
+  font-weight: 700;
+
+  text-align: center;
+
+  white-space: nowrap;
+}
+
+
+/* =====================================================
+   CHARTS
+===================================================== */
+
+.charts {
+  width: 100%;
+
+  margin-top: 30px;
+
+  display: grid;
+
+  grid-template-columns: 1fr;
+
+  gap: 25px;
+}
+
+.chart-card {
+  width: 100%;
+
+  background: #ffffff;
+
+  padding: 25px;
+
+  border-radius: 20px;
+
+  border: 1px solid #edf0f5;
+
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.07);
+}
+
+.chart-card h2 {
+  color: #172033;
+
+  font-size: 20px;
+
+  font-weight: 700;
+
+  margin-bottom: 20px;
+}
+
+
+/* =====================================================
+   READING HISTORY
+===================================================== */
+
+.history-section {
+  width: 100%;
+
+  background: #ffffff;
+
+  margin-top: 30px;
+
+  padding: 28px;
+
+  border-radius: 20px;
+
+  border: 1px solid #edf0f5;
+
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.07);
+}
+
+.history-title {
+  display: flex;
+
+  justify-content: space-between;
+
+  align-items: center;
+
+  margin-bottom: 22px;
+}
+
+.history-title h2 {
+  color: #172033;
+
+  font-size: 22px;
+
+  margin-bottom: 6px;
+}
+
+.history-title p {
+  color: #697386;
+
+  font-size: 14px;
+}
+
+.history-count {
+  background: #e7f1ff;
+
+  color: #0b5ed7;
+
+  padding: 8px 15px;
+
+  border-radius: 20px;
+
+  font-size: 13px;
+
+  font-weight: 700;
+}
+
+
+/* =====================================================
+   HISTORY TABLE
+===================================================== */
+
+.table-wrapper {
+  width: 100%;
+
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+
+  min-width: 700px;
+
+  border-collapse: collapse;
+
+  table-layout: fixed;
+}
+
+thead {
+  background: #f4f7fb;
+}
+
+th {
+  padding: 14px 16px;
+
+  text-align: center;
+
+  color: #586174;
+
+  font-size: 13px;
+
+  font-weight: 700;
+
+  border-bottom: 1px solid #e4e8ef;
+
+  white-space: nowrap;
+}
+
+td {
+  padding: 14px 16px;
+
+  text-align: center;
+
+  color: #344054;
+
+  font-size: 14px;
+
+  border-bottom: 1px solid #edf0f5;
+
+  white-space: nowrap;
+}
+
+
+/* COLUMN ALIGNMENT */
+
+th:nth-child(1),
+td:nth-child(1) {
+  width: 10%;
+}
+
+th:nth-child(2),
+td:nth-child(2) {
+  width: 22%;
+}
+
+th:nth-child(3),
+td:nth-child(3) {
+  width: 18%;
+}
+
+th:nth-child(4),
+td:nth-child(4) {
+  width: 24%;
+}
+
+th:nth-child(5),
+td:nth-child(5) {
+  width: 26%;
+}
+
+tbody tr:hover {
+  background: #f8fafc;
+}
+
+
+/* =====================================================
+   NO HISTORY
+===================================================== */
+
+.no-history {
+  text-align: center;
+
+  padding: 45px 20px;
+}
+
+.empty-icon {
+  font-size: 45px;
+
+  margin-bottom: 12px;
+}
+
+.no-history h3 {
+  color: #172033;
+
+  margin-bottom: 8px;
+}
+
+.no-history p {
+  color: #697386;
+
+  font-size: 14px;
+}
+
+
+/* =====================================================
+   FOOTER
+===================================================== */
+
+footer {
+  width: 100%;
+
+  margin-top: 40px;
+
+  padding: 25px;
+
+  background: #172033;
+
+  color: #ffffff;
+
+  text-align: center;
+
+  font-size: 14px;
+
+  line-height: 1.8;
+}
+
+
+/* =====================================================
+   TABLET
+===================================================== */
+
+@media (max-width: 900px) {
+
+  main {
+    width: 92%;
+  }
+
+  .cards {
+    grid-template-columns: 1fr;
+  }
+
+  .header {
+    padding: 22px 5%;
+  }
+
+  .header h1 {
+    font-size: 24px;
+  }
+
+  .score-card {
+    grid-template-columns: 1fr 120px 1fr;
+
+    gap: 20px;
+  }
+}
+
+
+/* =====================================================
+   MOBILE
+===================================================== */
+
+@media (max-width: 700px) {
+
+  .header {
+    flex-direction: column;
+
+    align-items: flex-start;
+
+    gap: 18px;
+  }
+
+  .live {
+    align-self: flex-start;
+  }
+
+  .connection-card {
+    flex-direction: column;
+
+    align-items: flex-start;
+
+    gap: 20px;
+  }
+
+  .card {
+    padding: 24px 18px;
+  }
+
+  .value {
+    font-size: 36px;
+  }
+
+  .chart-card {
+    padding: 15px;
+  }
+
+  .chart-card h2 {
+    font-size: 17px;
+  }
+
+
+  /* SCORE MOBILE */
+
+  .score-card {
+    grid-template-columns: 1fr;
+
+    text-align: center;
+
+    gap: 20px;
+
+    padding: 25px 18px;
+  }
+
+  .score-info {
+    text-align: center;
+  }
+
+  .score-info h2 {
+    font-size: 20px;
+  }
+
+  .score-info p {
+    max-width: 300px;
+
+    margin: 0 auto;
+
+    line-height: 1.5;
+  }
+
+  .score-circle {
+    width: 110px;
+    height: 110px;
+
+    margin: auto;
+  }
+
+  .score-status {
+    justify-self: center;
+
+    white-space: normal;
+
+    max-width: 250px;
+  }
+
+
+  /* HISTORY MOBILE */
+
+  .history-section {
+    padding: 18px;
+  }
+
+  .history-title {
+    align-items: flex-start;
+
+    gap: 15px;
+
+    flex-direction: column;
+  }
+
+
+  /* OVERALL STATUS MOBILE */
+
+  .status-card {
+    padding: 25px 15px;
+  }
+
+  .status-card h2 {
+    font-size: 21px;
+  }
+}
+
+
+/* =====================================================
+   SMALL MOBILE
+===================================================== */
+
+@media (max-width: 400px) {
+
+  main {
+    width: 94%;
+  }
+
+  .header h1 {
+    font-size: 21px;
+  }
+
+  .value {
+    font-size: 32px;
+  }
+
+  .status {
+    font-size: 15px;
+
+    padding: 11px 20px;
+  }
+
+  .score-info h2 {
+    font-size: 19px;
+  }
+}
