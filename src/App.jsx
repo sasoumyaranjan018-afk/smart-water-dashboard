@@ -8,760 +8,403 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-
-import { ref, onValue } from "firebase/database";
+import { ref, onValue, push, set } from "firebase/database";
 import { database } from "./firebase";
-
 import "./App.css";
 
-
 function App() {
-
-  // =================================================
-  // STATES
-  // =================================================
-
   const [waterData, setWaterData] = useState(null);
-
   const [history, setHistory] = useState([]);
 
-  const [deviceStatus, setDeviceStatus] = useState("OFFLINE");
-
-  const [lastSeen, setLastSeen] = useState(null);
-
+  const [connected, setConnected] = useState(false);
   const [lastUpdated, setLastUpdated] = useState("--:--:--");
 
+  // Manual pH
+  const [manualPh, setManualPh] = useState("");
+  const [savedPh, setSavedPh] = useState(null);
 
-  // =================================================
-  // FIREBASE
-  // =================================================
+  // Water checking
+  const [checked, setChecked] = useState(false);
 
   useEffect(() => {
-
-    // CURRENT WATER DATA
-    const waterRef =
-      ref(database, "waterQuality");
-
-
-    // HISTORY
-    const historyRef =
-      ref(database, "waterHistory");
-
-
-    // DEVICE STATUS
-    const deviceRef =
-      ref(database, "deviceStatus");
-
-
-    // =================================================
-    // CURRENT SENSOR DATA
-    // =================================================
+    // ================= CURRENT DATA =================
+    const waterRef = ref(database, "waterQuality");
 
     const unsubscribeWater = onValue(
       waterRef,
       (snapshot) => {
-
         const data = snapshot.val();
 
         if (data) {
-
           setWaterData(data);
+          setConnected(true);
 
-        }
-
-      }
-    );
-
-
-    // =================================================
-    // DEVICE STATUS
-    // =================================================
-
-    const unsubscribeDevice = onValue(
-      deviceRef,
-      (snapshot) => {
-
-        const data = snapshot.val();
-
-        if (!data) {
-
-          setDeviceStatus("OFFLINE");
-
-          setLastSeen(null);
-
-          return;
-        }
-
-
-        // Last seen timestamp
-
-        if (data.lastSeen) {
-
-          const timestamp =
-            Number(data.lastSeen);
-
-          setLastSeen(timestamp);
-
-          setLastUpdated(
-            new Date(
-              timestamp * 1000
-            ).toLocaleTimeString()
-          );
-        }
-
-
-        // =================================================
-        // CHECK IF DEVICE IS REALLY ONLINE
-        // =================================================
-
-        if (data.lastSeen) {
-
-          const now =
-            Math.floor(
-              Date.now() / 1000
-            );
-
-          const difference =
-            now - Number(data.lastSeen);
-
-
-          /*
-            ESP32 sends data every 5 seconds.
-
-            If lastSeen is less than 15 seconds old,
-            consider ESP32 ONLINE.
-          */
-
-          if (difference <= 15) {
-
-            setDeviceStatus("ONLINE");
-
-          } else {
-
-            setDeviceStatus("OFFLINE");
-
+          if (data.lastSeen) {
+            const date = new Date(Number(data.lastSeen));
+            if (!isNaN(date.getTime())) {
+              setLastUpdated(date.toLocaleTimeString());
+            }
           }
-
-        } else {
-
-          setDeviceStatus("OFFLINE");
-
         }
-
+      },
+      () => {
+        setConnected(false);
       }
     );
 
+    // ================= HISTORY =================
+    const historyRef = ref(database, "waterHistory");
 
-    // =================================================
-    // HISTORY
-    // =================================================
+    const unsubscribeHistory = onValue(historyRef, (snapshot) => {
+      const data = snapshot.val();
 
-    const unsubscribeHistory = onValue(
-      historyRef,
-      (snapshot) => {
-
-        const data =
-          snapshot.val();
-
-
-        if (!data) {
-
-          setHistory([]);
-
-          return;
-        }
-
-
-        const historyData =
-          Object.values(data)
-
-            .map((item) => {
-
-              const timestamp =
-                Number(item.timestamp);
-
-
-              return {
-
-                time:
-                  !isNaN(timestamp)
-
-                    ? new Date(
-                        timestamp * 1000
-                      ).toLocaleTimeString()
-
-                    : "--:--:--",
-
-
-                ph:
-                  Number(item.ph),
-
-
-                tds:
-                  Number(item.tds),
-
-
-                turbidity:
-                  Number(item.turbidity),
-
-
-                timestamp:
-                  timestamp
-
-              };
-
-            })
-
-
-            .filter((item) =>
-
-              !isNaN(item.ph) &&
-
-              !isNaN(item.tds) &&
-
-              !isNaN(item.turbidity)
-
-            )
-
-
-            .sort(
-              (a, b) =>
-                a.timestamp - b.timestamp
-            );
-
-
-        // Last 20 readings
-
-        setHistory(
-          historyData.slice(-20)
-        );
-
+      if (!data) {
+        setHistory([]);
+        return;
       }
-    );
 
+      const historyData = Object.values(data)
+        .map((item) => {
+          const timestamp = Number(item.timestamp);
 
-    // =================================================
-    // CLEANUP
-    // =================================================
+          return {
+            time: !isNaN(timestamp)
+              ? new Date(timestamp).toLocaleTimeString()
+              : "--:--:--",
+
+            ph: Number(item.ph),
+            tds: Number(item.tds),
+            turbidity: Number(item.turbidity),
+
+            timestamp,
+          };
+        })
+        .filter(
+          (item) =>
+            !isNaN(item.ph) &&
+            !isNaN(item.tds) &&
+            !isNaN(item.turbidity)
+        )
+        .sort((a, b) => a.timestamp - b.timestamp);
+
+      setHistory(historyData.slice(-20));
+    });
 
     return () => {
-
       unsubscribeWater();
-
-      unsubscribeDevice();
-
       unsubscribeHistory();
-
     };
-
   }, []);
 
+  // ================= SENSOR VALUES =================
 
-  // =================================================
-  // CURRENT VALUES
-  // =================================================
+  const sensorTds = Number(waterData?.tds);
+  const sensorTurbidity = Number(waterData?.turbidity);
 
-  const ph =
-    Number(waterData?.ph);
+  // Manual pH has priority
+  const currentPh =
+    savedPh !== null ? Number(savedPh) : null;
 
+  // ================= STATUS =================
 
-  const tds =
-    Number(waterData?.tds);
+  let phStatus = "NOT SET";
 
-
-  const turbidity =
-    Number(waterData?.turbidity);
-
-
-  // =================================================
-  // pH STATUS
-  // =================================================
-
-  let phStatus = "WAITING...";
-
-
-  if (!isNaN(ph)) {
-
-    if (ph < 6.5) {
-
+  if (currentPh !== null && !isNaN(currentPh)) {
+    if (currentPh < 6.5) {
       phStatus = "LOW";
-
-    }
-
-    else if (ph > 8.5) {
-
+    } else if (currentPh > 8.5) {
       phStatus = "HIGH";
-
-    }
-
-    else {
-
+    } else {
       phStatus = "NORMAL";
-
     }
-
   }
 
+  let tdsStatus = "WAITING";
 
-  // =================================================
-  // TDS STATUS
-  // =================================================
-
-  let tdsStatus = "WAITING...";
-
-
-  if (!isNaN(tds)) {
-
-    if (tds < 500) {
-
-      tdsStatus = "SAFE";
-
-    }
-
-    else {
-
-      tdsStatus = "HIGH";
-
-    }
-
+  if (!isNaN(sensorTds)) {
+    tdsStatus = sensorTds < 500 ? "SAFE" : "HIGH";
   }
 
+  let turbidityStatus = "WAITING";
 
-  // =================================================
-  // TURBIDITY STATUS
-  // =================================================
-
-  let turbidityStatus =
-    "WAITING...";
-
-
-  if (!isNaN(turbidity)) {
-
-    if (turbidity < 5) {
-
-      turbidityStatus = "CLEAR";
-
-    }
-
-    else {
-
-      turbidityStatus = "HIGH";
-
-    }
-
+  if (!isNaN(sensorTurbidity)) {
+    turbidityStatus =
+      sensorTurbidity < 5 ? "CLEAR" : "HIGH";
   }
 
+  // ================= CHECK WATER =================
 
-  // =================================================
-  // OVERALL WATER QUALITY
-  // =================================================
+  const checkWater = () => {
+    setChecked(true);
+  };
 
-  let overallStatus =
-    "WAITING...";
-
-
+  let overallStatus = "READY TO CHECK";
   let statusMessage =
-    "Waiting for sensor readings...";
+    "Enter a manual pH reading and click Check Water.";
 
+  let problems = [];
 
-  if (
+  if (checked) {
+    if (currentPh === null || isNaN(currentPh)) {
+      overallStatus = "pH REQUIRED";
+      statusMessage = "Please enter a pH reading first.";
+    } else {
+      const phSafe = currentPh >= 6.5 && currentPh <= 8.5;
+      const tdsSafe =
+        !isNaN(sensorTds) && sensorTds < 500;
+      const turbiditySafe =
+        !isNaN(sensorTurbidity) && sensorTurbidity < 5;
 
-    !isNaN(ph) &&
+      if (phSafe && tdsSafe && turbiditySafe) {
+        overallStatus = "WATER SAFE";
+        statusMessage =
+          "All monitored parameters are within the selected safe range.";
+      } else {
+        overallStatus = "WATER UNSAFE";
 
-    !isNaN(tds) &&
+        if (!phSafe) problems.push("pH");
+        if (!tdsSafe) problems.push("TDS");
+        if (!turbiditySafe) problems.push("Turbidity");
 
-    !isNaN(turbidity)
-
-  ) {
-
-    const phSafe =
-      ph >= 6.5 &&
-      ph <= 8.5;
-
-
-    const tdsSafe =
-      tds < 500;
-
-
-    const turbiditySafe =
-      turbidity < 5;
-
-
-    if (
-      phSafe &&
-      tdsSafe &&
-      turbiditySafe
-    ) {
-
-      overallStatus =
-        "WATER SAFE";
-
-
-      statusMessage =
-        "All monitored parameters are within the safe range.";
-
+        statusMessage =
+          problems.length > 0
+            ? `Check: ${problems.join(", ")}`
+            : "One or more parameters are outside the safe range.";
+      }
     }
-
-    else {
-
-      overallStatus =
-        "WATER UNSAFE";
-
-
-      const problems = [];
-
-
-      if (!phSafe) {
-
-        problems.push("pH");
-
-      }
-
-
-      if (!tdsSafe) {
-
-        problems.push("TDS");
-
-      }
-
-
-      if (!turbiditySafe) {
-
-        problems.push("Turbidity");
-
-      }
-
-
-      statusMessage =
-        "Check: " +
-        problems.join(", ");
-
-    }
-
   }
 
+  // ================= SAVE MANUAL PH =================
 
-  // =================================================
-  // RENDER
-  // =================================================
+  const saveManualPh = async () => {
+    const value = Number(manualPh);
+
+    if (isNaN(value) || value < 0 || value > 14) {
+      alert("Please enter a valid pH value between 0 and 14.");
+      return;
+    }
+
+    setSavedPh(value);
+    setChecked(false);
+
+    try {
+      const manualRef = ref(database, "manualPH");
+      const newRef = push(manualRef);
+
+      await set(newRef, {
+        ph: value,
+        timestamp: Date.now(),
+      });
+
+      alert("Manual pH reading saved successfully!");
+    } catch (error) {
+      console.error(error);
+      alert("pH saved on dashboard, but Firebase save failed.");
+    }
+  };
 
   return (
-
     <div className="dashboard">
 
-
-      {/* =================================================
-          HEADER
-      ================================================= */}
+      {/* ================= HEADER ================= */}
 
       <header className="header">
-
         <div>
-
-          <h1>
-            💧 Smart Water Quality
-          </h1>
-
-          <p>
-            Real-Time Monitoring Dashboard
-          </p>
-
+          <h1>💧 Smart Water Quality</h1>
+          <p>Real-Time Water Monitoring System</p>
         </div>
 
+        <div className="live">
+          <span
+            className={
+              connected
+                ? "live-dot online"
+                : "live-dot offline"
+            }
+          ></span>
 
-        {/* =================================================
-            REAL DEVICE STATUS
-        ================================================= */}
-
-        <div
-          className={
-            deviceStatus === "ONLINE"
-              ? "live active"
-              : "live"
-          }
-        >
-
-          <span></span>
-
-          {deviceStatus === "ONLINE"
-            ? "ONLINE"
-            : "OFFLINE"}
-
+          {connected ? "ONLINE" : "OFFLINE"}
         </div>
-
       </header>
-
 
       <main>
 
+        {/* ================= SENSOR READINGS ================= */}
 
-        {/* =================================================
-            CONNECTION CARD
-        ================================================= */}
+        <section className="section">
 
-        <section className="connection-card">
+          <div className="section-title">
+            <h2>📡 Sensor Readings</h2>
+            <p>Current water quality parameters</p>
+          </div>
 
+          <div className="cards">
 
-          <div className="connection-item">
+            {/* pH */}
 
+            <div className="card ph-card">
 
-            <span
-              className={
-                deviceStatus === "ONLINE"
-                  ? "connection-dot connected"
-                  : "connection-dot"
-              }
-            ></span>
+              <div className="icon">🧪</div>
 
+              <h3>pH Level</h3>
+
+              <div className="value">
+                {currentPh !== null
+                  ? currentPh.toFixed(2)
+                  : "--"}
+              </div>
+
+              <p>Range: 0 – 14</p>
+
+              <div className="sensor-status">
+                {phStatus}
+              </div>
+
+            </div>
+
+            {/* TDS */}
+
+            <div className="card">
+
+              <div className="icon">💧</div>
+
+              <h3>TDS</h3>
+
+              <div className="value">
+                {!isNaN(sensorTds)
+                  ? sensorTds.toFixed(0)
+                  : "--"}
+              </div>
+
+              <p>ppm</p>
+
+              <div className="sensor-status">
+                {tdsStatus}
+              </div>
+
+            </div>
+
+            {/* TURBIDITY */}
+
+            <div className="card">
+
+              <div className="icon">🌫️</div>
+
+              <h3>Turbidity</h3>
+
+              <div className="value">
+                {!isNaN(sensorTurbidity)
+                  ? sensorTurbidity.toFixed(2)
+                  : "--"}
+              </div>
+
+              <p>NTU</p>
+
+              <div className="sensor-status">
+                {turbidityStatus}
+              </div>
+
+            </div>
+
+          </div>
+
+          <div className="connection-info">
 
             <div>
+              <span
+                className={
+                  connected
+                    ? "status-dot online"
+                    : "status-dot offline"
+                }
+              ></span>
 
-              <strong>
-
-                {deviceStatus === "ONLINE"
-                  ? "ESP32 Connected"
-                  : "ESP32 Disconnected"}
-
-              </strong>
-
-
-              <small>
-                Firebase device status
-              </small>
-
+              {connected
+                ? "ESP32 / Firebase Connected"
+                : "ESP32 / Firebase Offline"}
             </div>
-
-          </div>
-
-
-          {/* =================================================
-              LAST UPDATED
-          ================================================= */}
-
-          <div className="last-updated">
-
-            <span>🕐</span>
 
             <div>
-
-              <strong>
-                Last Updated
-              </strong>
-
-
-              <small>
-
-                {lastUpdated}
-
-              </small>
-
-            </div>
-
-          </div>
-
-
-        </section>
-
-
-        {/* =================================================
-            SENSOR CARDS
-        ================================================= */}
-
-        <section className="cards">
-
-
-          {/* pH */}
-
-          <div className="card">
-
-            <div className="icon">
-              🧪
-            </div>
-
-
-            <h3>
-              pH Level
-            </h3>
-
-
-            <div className="value">
-
-              {!isNaN(ph)
-                ? ph.toFixed(2)
-                : "--"}
-
-            </div>
-
-
-            <p>
-              Ideal: 6.5 – 8.5
-            </p>
-
-
-            <div className="sensor-status">
-
-              {phStatus}
-
-            </div>
-
-          </div>
-
-
-          {/* TDS */}
-
-          <div className="card">
-
-            <div className="icon">
-              💧
-            </div>
-
-
-            <h3>
-              TDS
-            </h3>
-
-
-            <div className="value">
-
-              {!isNaN(tds)
-                ? tds.toFixed(0)
-                : "--"}
-
-            </div>
-
-
-            <p>
-              ppm
-            </p>
-
-
-            <div className="sensor-status">
-
-              {tdsStatus}
-
-            </div>
-
-          </div>
-
-
-          {/* TURBIDITY */}
-
-          <div className="card">
-
-            <div className="icon">
-              🌫️
-            </div>
-
-
-            <h3>
-              Turbidity
-            </h3>
-
-
-            <div className="value">
-
-              {!isNaN(turbidity)
-                ? turbidity.toFixed(2)
-                : "--"}
-
-            </div>
-
-
-            <p>
-              NTU
-            </p>
-
-
-            <div className="sensor-status">
-
-              {turbidityStatus}
-
+              🕐 Last Updated: {lastUpdated}
             </div>
 
           </div>
 
         </section>
 
+        {/* ================= CHECK WATER ================= */}
 
-        {/* =================================================
-            OVERALL STATUS
-        ================================================= */}
+        <section className="check-section">
 
-        <section className="status-card">
-
-
-          <h2>
-            💧 Overall Water Quality
-          </h2>
-
-
-          <div
-            className={
-              overallStatus === "WATER SAFE"
-                ? "status safe"
-
-                : overallStatus === "WATER UNSAFE"
-                ? "status unsafe"
-
-                : "status"
-            }
-          >
-
-            {overallStatus}
-
-          </div>
-
+          <h2>🔍 Check Water Quality</h2>
 
           <p>
-            {statusMessage}
+            Analyze the current sensor readings and determine
+            whether the water is safe.
           </p>
 
+          <button
+            className="check-button"
+            onClick={checkWater}
+          >
+            CHECK WATER
+          </button>
 
         </section>
 
+        {/* ================= RESULT ================= */}
 
-        {/* =================================================
-            GRAPHS
-        ================================================= */}
+        {checked && (
+          <section className="result-section">
 
-        <section className="charts">
+            <h2>💧 Water Quality Result</h2>
 
+            <div
+              className={
+                overallStatus === "WATER SAFE"
+                  ? "result safe"
+                  : overallStatus === "WATER UNSAFE"
+                  ? "result unsafe"
+                  : "result warning"
+              }
+            >
+              {overallStatus}
+            </div>
+
+            <p>{statusMessage}</p>
+
+          </section>
+        )}
+
+        {/* ================= HISTORY ================= */}
+
+        <section className="section history-section">
+
+          <div className="section-title">
+            <h2>📊 Reading History</h2>
+            <p>Last 20 recorded sensor readings</p>
+          </div>
 
           {/* pH */}
 
           <div className="chart-card">
 
-            <h2>
-              🧪 pH History
-            </h2>
+            <h3>🧪 pH History</h3>
 
+            <ResponsiveContainer width="100%" height={300}>
 
-            <ResponsiveContainer
-              width="100%"
-              height={300}
-            >
+              <LineChart data={history}>
 
-              <LineChart
-                data={history}
-              >
-
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                />
-
+                <CartesianGrid strokeDasharray="3 3" />
 
                 <XAxis
                   dataKey="time"
+                  tick={{ fontSize: 11 }}
                 />
 
-
-                <YAxis
-                  domain={[0, 14]}
-                />
-
+                <YAxis domain={[0, 14]} />
 
                 <Tooltip />
-
 
                 <Line
                   type="monotone"
@@ -777,40 +420,26 @@ function App() {
 
           </div>
 
-
           {/* TDS */}
 
           <div className="chart-card">
 
-            <h2>
-              💧 TDS History
-            </h2>
+            <h3>💧 TDS History</h3>
 
+            <ResponsiveContainer width="100%" height={300}>
 
-            <ResponsiveContainer
-              width="100%"
-              height={300}
-            >
+              <LineChart data={history}>
 
-              <LineChart
-                data={history}
-              >
-
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                />
-
+                <CartesianGrid strokeDasharray="3 3" />
 
                 <XAxis
                   dataKey="time"
+                  tick={{ fontSize: 11 }}
                 />
-
 
                 <YAxis />
 
-
                 <Tooltip />
-
 
                 <Line
                   type="monotone"
@@ -826,40 +455,26 @@ function App() {
 
           </div>
 
-
-          {/* TURBIDITY */}
+          {/* Turbidity */}
 
           <div className="chart-card">
 
-            <h2>
-              🌫️ Turbidity History
-            </h2>
+            <h3>🌫️ Turbidity History</h3>
 
+            <ResponsiveContainer width="100%" height={300}>
 
-            <ResponsiveContainer
-              width="100%"
-              height={300}
-            >
+              <LineChart data={history}>
 
-              <LineChart
-                data={history}
-              >
-
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                />
-
+                <CartesianGrid strokeDasharray="3 3" />
 
                 <XAxis
                   dataKey="time"
+                  tick={{ fontSize: 11 }}
                 />
-
 
                 <YAxis />
 
-
                 <Tooltip />
-
 
                 <Line
                   type="monotone"
@@ -875,163 +490,76 @@ function App() {
 
           </div>
 
-
         </section>
 
+        {/* ================= MANUAL PH ================= */}
 
-        {/* =================================================
-            READING HISTORY
-        ================================================= */}
+        <section className="manual-ph-section">
 
-        <section className="history-section">
+          <div className="manual-header">
+            <h2>🧪 Manual pH Reading</h2>
 
+            <p>
+              Enter the pH value manually because the pH sensor
+              is currently unavailable.
+            </p>
+          </div>
 
-          <div className="history-title">
+          <div className="manual-form">
 
-            <div>
+            <input
+              type="number"
+              min="0"
+              max="14"
+              step="0.01"
+              placeholder="Enter pH (0 - 14)"
+              value={manualPh}
+              onChange={(e) => setManualPh(e.target.value)}
+            />
 
-              <h2>
-                📊 Reading History
-              </h2>
-
-              <p>
-                Latest 20 sensor readings
-              </p>
-
-            </div>
-
-
-            <div className="history-count">
-
-              {history.length} Readings
-
-            </div>
+            <button
+              className="save-button"
+              onClick={saveManualPh}
+            >
+              SAVE pH
+            </button>
 
           </div>
 
+          {savedPh !== null && (
+            <div className="manual-result">
 
-          {history.length === 0 ? (
+              Current Manual pH:
 
-            <div className="no-history">
+              <strong>
+                {Number(savedPh).toFixed(2)}
+              </strong>
 
-              <div className="empty-icon">
-                📊
-              </div>
-
-              <h3>
-                No History Available
-              </h3>
-
-              <p>
-                Sensor readings will appear here.
-              </p>
-
-            </div>
-
-          ) : (
-
-            <div className="table-wrapper">
-
-              <table>
-
-                <thead>
-
-                  <tr>
-
-                    <th>
-                      #
-                    </th>
-
-                    <th>
-                      Time
-                    </th>
-
-                    <th>
-                      pH
-                    </th>
-
-                    <th>
-                      TDS (ppm)
-                    </th>
-
-                    <th>
-                      Turbidity (NTU)
-                    </th>
-
-                  </tr>
-
-                </thead>
-
-
-                <tbody>
-
-                  {history.map(
-                    (item, index) => (
-
-                      <tr
-                        key={
-                          item.timestamp +
-                          "-" +
-                          index
-                        }
-                      >
-
-                        <td>
-                          {index + 1}
-                        </td>
-
-                        <td>
-                          {item.time}
-                        </td>
-
-                        <td>
-                          {item.ph.toFixed(2)}
-                        </td>
-
-                        <td>
-                          {item.tds.toFixed(0)}
-                        </td>
-
-                        <td>
-                          {item.turbidity.toFixed(2)}
-                        </td>
-
-                      </tr>
-
-                    )
-                  )}
-
-                </tbody>
-
-              </table>
+              <span
+                className={
+                  phStatus === "NORMAL"
+                    ? "normal-text"
+                    : "warning-text"
+                }
+              >
+                {phStatus}
+              </span>
 
             </div>
-
           )}
 
         </section>
 
-
       </main>
 
-
-      {/* =================================================
-          FOOTER
-      ================================================= */}
-
       <footer>
-
         Smart Water Quality Monitoring System
-        • ESP32 + Firebase
-
+        <br />
+        ESP32 • Firebase • React
       </footer>
 
-
     </div>
-
   );
-
 }
-
 
 export default App;
