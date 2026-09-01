@@ -391,15 +391,30 @@ function App() {
       ? NaN
       : Number(waterData.ph);
 
-  const middlePhValue = useMemo(() => {
+  const [animatedPhValue, setAnimatedPhValue] = useState(7.5);
+
+  useEffect(() => {
     const min = Number(phMin);
     const max = Number(phMax);
 
     if (Number.isNaN(min) || Number.isNaN(max) || min >= max) {
-      return NaN;
+      setAnimatedPhValue(NaN);
+      return;
     }
 
-    return (min + max) / 2;
+    let phase = 0;
+
+    const updateValue = () => {
+      phase += 0.3;
+      const ratio = (Math.sin(phase) + 1) / 2;
+      const nextValue = min + (max - min) * ratio;
+      setAnimatedPhValue(Number(nextValue.toFixed(2)));
+    };
+
+    updateValue();
+    const interval = setInterval(updateValue, 1200);
+
+    return () => clearInterval(interval);
   }, [phMin, phMax]);
 
 
@@ -616,8 +631,8 @@ function App() {
           </h3>
 
           <div className="value">
-            {!Number.isNaN(middlePhValue)
-              ? middlePhValue.toFixed(2)
+            {!Number.isNaN(animatedPhValue)
+              ? animatedPhValue.toFixed(2)
               : "--"}
           </div>
 
