@@ -13,6 +13,7 @@ import {
 import {
   ref,
   onValue,
+  set,
 } from "firebase/database";
 
 import { database } from "./firebase";
@@ -123,44 +124,39 @@ function App() {
 
   const [showPhPopup, setShowPhPopup] = useState(false);
 
+  const DEFAULT_PH_MIN = 6.5;
+  const DEFAULT_PH_MAX = 8.5;
+
   const [phMin, setPhMin] = useState(() => {
     const saved = localStorage.getItem("phMin");
-    return saved || "6.5";
+    return saved !== null ? saved : String(DEFAULT_PH_MIN);
   });
 
   const [phMax, setPhMax] = useState(() => {
     const saved = localStorage.getItem("phMax");
-    return saved || "8.5";
+    return saved !== null ? saved : String(DEFAULT_PH_MAX);
   });
 
-  const [animatedPh, setAnimatedPh] = useState(7.5);
-
   useEffect(() => {
-    const min = Number(phMin);
-    const max = Number(phMax);
+    const settingsRef = ref(database, "pHSettings");
 
-    if (Number.isNaN(min) || Number.isNaN(max) || min >= max) {
-      return;
-    }
+    const unsubscribe = onValue(settingsRef, (snapshot) => {
+      const data = snapshot.val();
 
-    let phase = 0;
+      const nextMin = data?.min ?? DEFAULT_PH_MIN;
+      const nextMax = data?.max ?? DEFAULT_PH_MAX;
 
-    const updateValue = () => {
-      phase += 0.35;
-      const ratio = (Math.sin(phase) + 1) / 2;
-      const nextValue = min + (max - min) * ratio;
-      setAnimatedPh(Number(nextValue.toFixed(2)));
-    };
+      setPhMin(String(nextMin));
+      setPhMax(String(nextMax));
 
-    updateValue();
-    const interval = setInterval(updateValue, 1300);
+      localStorage.setItem("phMin", String(nextMin));
+      localStorage.setItem("phMax", String(nextMax));
+    });
 
-    return () => clearInterval(interval);
-  }, [phMin, phMax]);
-
+    return () => unsubscribe();
+  }, []);
 
   const savePhRange = () => {
-
     const min = Number(phMin);
     const max = Number(phMax);
 
@@ -173,8 +169,15 @@ function App() {
       return;
     }
 
-    localStorage.setItem("phMin", min);
-    localStorage.setItem("phMax", max);
+    const settingsRef = ref(database, "pHSettings");
+
+    set(settingsRef, {
+      min,
+      max,
+    });
+
+    localStorage.setItem("phMin", String(min));
+    localStorage.setItem("phMax", String(max));
 
     setShowPhPopup(false);
   };
@@ -387,6 +390,17 @@ function App() {
     waterData?.ph === ""
       ? NaN
       : Number(waterData.ph);
+
+  const middlePhValue = useMemo(() => {
+    const min = Number(phMin);
+    const max = Number(phMax);
+
+    if (Number.isNaN(min) || Number.isNaN(max) || min >= max) {
+      return NaN;
+    }
+
+    return (min + max) / 2;
+  }, [phMin, phMax]);
 
 
   const tds =
@@ -602,8 +616,8 @@ function App() {
           </h3>
 
           <div className="value">
-            {!Number.isNaN(animatedPh)
-              ? animatedPh.toFixed(2)
+            {!Number.isNaN(middlePhValue)
+              ? middlePhValue.toFixed(2)
               : "--"}
           </div>
 
